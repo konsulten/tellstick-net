@@ -58,9 +58,9 @@ void sendToLocalListeners() {
 void send() {
 	unsigned char pause = DEFAULT_PAUSE;
 	unsigned char repeats = DEFAULT_REPEATS;
-	unsigned char i, j;
+	unsigned char i, j, k;
 	unsigned long ack;
-	BYTE protocol[20] = "", model[20] = "";
+	BYTE protocol[20], model[20];
 
 	if (!LMEnterHash()) {
 		return;
@@ -86,7 +86,11 @@ void send() {
 		return;
 	}
 
-	if (!LMFindHashString("S")) {
+	if (LMFindHashString("S")) {
+		k = 0;
+	} else if (LMFindHashString("T")) {
+		k = 1;
+	} else {
 		return;
 	}
 	if (!LMTakeString(&sendPacket, sizeof(sendPacket))) {
@@ -96,7 +100,11 @@ void send() {
 	rfStartTransmit();
 	for(unsigned char i = 0; i < repeats; ++i) {
 		setTXPulses(2);
-		rfSend(&sendPacket);
+		if(k == 0) {
+			sendCommand();
+		} else {
+			sendExtendedCommand();
+		}
 		for(unsigned char j = 0; j < pause; ++j) {
 			__delay_ms(1);
 		}
@@ -168,8 +176,8 @@ void setIp() {
 }
 
 void handleMessage() {
-	BYTE name[20] = "";
-
+	unsigned char name[20];
+	initSender();
 	if (!LMTakeString(&name, sizeof(name))) {
 		printf("Could not handle message (to long?)\r\n");
 		return;
